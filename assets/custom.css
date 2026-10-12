@@ -1,0 +1,217 @@
+/* ==========================================================================
+   STREAMVIEW ANALYTICS - DARK THEME PREMIUM (DASH ASSETS)
+   ========================================================================== */
+
+/* 1. VARIABLES GLOBALES DE DASH EN MODO OSCURO */
+:root,
+body,
+.dash-dropdown,
+.dash-dropdown-content {
+    --Dash-Fill-Inverse-Strong: #27272A !important;
+    --Dash-Text-Strong: #F9FAFB !important;
+    --Dash-Text-Weak: #C084FC !important;
+    --Dash-Text-Disabled: #9CA3AF !important;
+    --Dash-Stroke-Strong: #3F3F46 !important;
+    --Dash-Fill-Disabled: #27272A !important;
+    --Dash-Fill-Interactive-Strong: #A855F7 !important;
+    --Dash-Fill-Interactive-Weak: #2E1A47 !important;
+    --Dash-Shading-Strong: rgba(0, 0, 0, 0.8) !important;
+    --Dash-Shading-Weak: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* 2. RECTÁNGULO PRINCIPAL DEL FILTRO (CERRADO) */
+.dash-dropdown,
+button.dash-dropdown {
+    background-color: #27272A !important;
+    background: #27272A !important;
+    border: 1px solid #3F3F46 !important;
+    border-radius: 8px !important;
+    color: #F9FAFB !important;
+    min-height: 38px !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.dash-dropdown:hover {
+    border-color: #A855F7 !important;
+}
+
+.dash-dropdown:focus,
+.dash-dropdown:focus-visible,
+.dash-dropdown[data-state="open"] {
+    border-color: #A855F7 !important;
+    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.4) !important;
+}
+
+.dash-dropdown-value {
+    color: #F9FAFB !important;
+    font-weight: 500 !important;
+    font-size: 13.5px !important;
+}
+
+.dash-dropdown-placeholder {
+    color: #9CA3AF !important;
+    font-size: 13px !important;
+}
+
+.dash-dropdown-trigger-icon {
+    color: #C084FC !important;
+    fill: #C084FC !important;
+}
+
+.dash-dropdown-value-count {
+    background: #2E1A47 !important;
+    color: #E9D5FF !important;
+    border: 1px solid #7E22CE !important;
+    font-weight: 600 !important;
+}
+
+/* 3. MENÚ DESPLEGABLE / POPOVER */
+.dash-dropdown-content,
+div.dash-dropdown-content {
+    background-color: #18181B !important;
+    background: #18181B !important;
+    border: 1px solid #3F3F46 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.8) !important;
+    color: #F9FAFB !important;
+    z-index: 9999 !important;
+}
+
+/* Caja de búsqueda interna "Search" */
+.dash-dropdown-search-container {
+    background-color: #27272A !important;
+    background: #27272A !important;
+    border: 1px solid #7E22CE !important;
+    border-radius: 6px !important;
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.25) !important;
+}
+
+.dash-dropdown-search {
+    color: #F9FAFB !important;
+    background: transparent !important;
+    font-size: 13px !important;
+}
+
+.dash-dropdown-search::placeholder {
+    color: #9CA3AF !important;
+}
+
+.dash-dropdown-search-icon {
+    color: #A855F7 !important;
+}
+
+/* Botones "Select All" / "Deselect All" */
+.dash-dropdown-actions {
+    background-color: #18181B !important;
+    border-top: 1px solid #27272A !important;
+    border-bottom: 1px solid #27272A !important;
+    padding: 8px 12px !important;
+}
+
+.dash-dropdown-action-button {
+    color: #C084FC !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+}
+
+.dash-dropdown-action-button:hover {
+    color: #FFFFFF !important;
+    text-shadow: 0 0 8px rgba(168, 85, 247, 0.6) !important;
+}
+
+/* Opciones de la lista */
+.dash-dropdown-options {
+    background-color: #18181B !important;
+}
+
+.dash-dropdown-option {
+    background-color: #18181B !important;
+    color: #F9FAFB !important;
+    box-shadow: 0 -1px 0 0 #27272A inset !important;
+    cursor: pointer !important;
+}
+
+.dash-dropdown-option:hover,
+.dash-dropdown-option[data-highlighted] {
+    background-color: #2E1A47 !important;
+    color: #E879F9 !important;
+}
+
+.dash-dropdown-option span,
+.dash-dropdown-option label,
+.dash-dropdown-option div {
+    color: #F9FAFB !important;
+    font-size: 13px !important;
+}
+
+.dash-dropdown-option:hover span,
+.dash-dropdown-option:hover label {
+    color: #E879F9 !important;
+}
+
+.dash-dropdown-option input[type="checkbox"] {
+    accent-color: #A855F7 !important;
+    width: 15px !important;
+    height: 15px !important;
+    cursor: pointer !important;
+}
+
+/* 4. RETROCOMPATIBILIDAD CON SELECT CLÁSICO */
+.Select-control {
+    background-color: #27272A !important;
+    background: #27272A !important;
+    border: 1px solid #3F3F46 !important;
+    border-radius: 8px !important;
+    color: #F9FAFB !important;
+}
+
+.Select-value,
+.Select-value-label,
+.Select--single>.Select-control .Select-value {
+    color: #F9FAFB !important;
+}
+
+.Select-placeholder {
+    color: #9CA3AF !important;
+}
+
+.Select-menu-outer {
+    background-color: #18181B !important;
+    border: 1px solid #3F3F46 !important;
+}
+
+.Select-option {
+    background-color: #18181B !important;
+    color: #F9FAFB !important;
+}
+
+.Select-option:hover {
+    background-color: #2E1A47 !important;
+    color: #E879F9 !important;
+}
+
+/* 5. RANGE SLIDER (AÑOS DE ESTRENO) */
+.rc-slider-rail {
+    background-color: #27272A !important;
+    height: 6px !important;
+}
+
+.rc-slider-track {
+    background: linear-gradient(90deg, #A855F7 0%, #C084FC 100%) !important;
+    height: 6px !important;
+}
+
+.rc-slider-handle {
+    border: 2px solid #A855F7 !important;
+    background-color: #0D0D0D !important;
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.6) !important;
+}
+
+.rc-slider-mark-text,
+.rc-slider-mark-text-active,
+span.rc-slider-mark-text {
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    font-size: 11px !important;
+}

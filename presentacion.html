@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreamView Analytics — De la Niebla a la Evidencia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000000;
+      --card-bg: rgba(15, 15, 20, 0.88);
+      --card-border: #23232b;
+      --primary: #3b82f6;
+      --accent-purple: #a855f7;
+      --accent-cyan: #38bdf8;
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+      --accent-amber: #f59e0b;
+      --text: #ffffff;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* 16:9 Slide Viewport */
+    .viewport {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000000;
+      position: relative;
+    }
+
+    .slide-canvas {
+      position: relative;
+      width: 100vw;
+      height: 56.25vw; /* 16:9 aspect ratio */
+      max-height: 100vh;
+      max-width: 177.78vh; /* 16:9 aspect ratio */
+      background: #000000;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 0 120px rgba(0, 0, 0, 0.95);
+    }
+
+    /* Artwork Elements matching previous class slides */
+    .artwork-fan {
+      position: absolute;
+      right: -8%;
+      top: -10%;
+      width: 58%;
+      height: 120%;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.9;
+    }
+
+    .artwork-orb {
+      position: absolute;
+      right: -10%;
+      bottom: -15%;
+      width: 48%;
+      height: 65%;
+      background: radial-gradient(circle, #312e81 0%, #1e1b4b 50%, transparent 75%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.55;
+      filter: blur(50px);
+    }
+
+    /* Top Metadata Bar */
+    .slide-meta {
+      position: relative;
+      z-index: 10;
+      padding: clamp(24px, 3.5vw, 48px) clamp(32px, 4.5vw, 72px) 0 clamp(32px, 4.5vw, 72px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: clamp(0.75rem, 1.1vw, 1.1rem);
+      color: var(--text-muted);
+    }
+
+    .tagline {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 500;
+    }
+
+    .pill {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      padding: 3px 12px;
+      border-radius: 6px;
+      font-size: 0.85em;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .pill-purple { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; border-color: rgba(168, 85, 247, 0.4); }
+    .pill-emerald { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4); }
+    .pill-rose { background: rgba(244, 63, 94, 0.2); color: #fda4af; border-color: rgba(244, 63, 94, 0.4); }
+
+    .counter {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim);
+      font-weight: 700;
+      letter-spacing: 1px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid #1e293b;
+    }
+
+    /* Slide Engine */
+    .slide {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: scale(0.985);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: clamp(24px, 3.5vw, 48px) clamp(32px, 4.5vw, 72px) clamp(24px, 3.2vw, 44px) clamp(32px, 4.5vw, 72px);
+      z-index: 5;
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+    }
+
+    /* Display Typography */
+    .title-display {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(3.8rem, 8.2vw, 8.8rem);
+      line-height: 0.92;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #ffffff;
+      margin-top: 10px;
+    }
+
+    .title-display .highlight {
+      background: linear-gradient(180deg, #38bdf8 0%, #3b82f6 50%, #1d4ed8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .title-display .highlight-purple {
+      background: linear-gradient(180deg, #c084fc 0%, #a855f7 50%, #6b21a8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .section-headline {
+      font-family: 'Outfit', 'Inter', sans-serif;
+      font-size: clamp(1.8rem, 3.2vw, 3.6rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1px;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    .section-subheadline {
+      font-size: clamp(0.92rem, 1.35vw, 1.45rem);
+      color: var(--text-muted);
+      font-weight: 400;
+      line-height: 1.45;
+      max-width: 88%;
+    }
+
+    /* Slide Body Layouts */
+    .slide-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      z-index: 10;
+      margin: 14px 0;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(16px, 2.5vw, 38px);
+      align-items: stretch;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: clamp(14px, 2.2vw, 32px);
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: clamp(12px, 1.8vw, 26px);
+    }
+
+    /* Dark Glass Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: clamp(12px, 1.6vw, 22px);
+      padding: clamp(18px, 2.4vw, 34px);
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .card:hover {
+      border-color: #3b82f6;
+      transform: translateY(-2px);
+    }
+
+    .card-title {
+      font-size: clamp(1.05rem, 1.5vw, 1.75rem);
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+
+    .card-text {
+      font-size: clamp(0.82rem, 1.1vw, 1.25rem);
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .stat-number {
+      font-size: clamp(2.4rem, 3.8vw, 4.8rem);
+      font-weight: 900;
+      line-height: 1;
+      font-family: 'Outfit', sans-serif;
+      margin-bottom: 6px;
+    }
+
+    .stat-label {
+      font-size: clamp(0.72rem, 0.95vw, 1.1rem);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      font-weight: 700;
+    }
+
+    /* Interactive Demo Button on Slide 4 */
+    .demo-action-box {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(168, 85, 247, 0.18));
+      border: 2px solid #3b82f6;
+      border-radius: 24px;
+      padding: clamp(24px, 3.5vw, 54px);
+      text-align: center;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      transition: all 0.3s;
+      box-shadow: 0 0 50px rgba(59, 130, 246, 0.3);
+    }
+    .demo-action-box:hover {
+      transform: scale(1.02);
+      border-color: #a855f7;
+      box-shadow: 0 0 80px rgba(168, 85, 247, 0.45);
+    }
+
+    /* Recommendations Table / Rows on Slide 7 */
+    .recom-row {
+      display: flex;
+      align-items: center;
+      padding: clamp(10px, 1.35vw, 20px) 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: clamp(0.9rem, 1.25vw, 1.45rem);
+      color: #f1f5f9;
+      line-height: 1.45;
+    }
+
+    .recom-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(1.1rem, 1.6vw, 1.9rem);
+      font-weight: 800;
+      color: #38bdf8;
+      width: clamp(45px, 5vw, 75px);
+      flex-shrink: 0;
+    }
+
+    /* Slide Footer & Speaker Bar */
+    .slide-footer {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 8px;
+    }
+
+    .footer-brand {
+      font-size: clamp(0.75rem, 1vw, 1.1rem);
+      color: var(--text-dim);
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
+    /* Speaker Notes Drawer (Drawer sync with Gion.md) */
+    .speaker-drawer {
+      position: absolute;
+      bottom: clamp(45px, 6vw, 75px);
+      left: clamp(32px, 4.5vw, 72px);
+      right: clamp(32px, 4.5vw, 72px);
+      background: #0f172a;
+      border: 1px solid #3b82f6;
+      border-radius: 14px;
+      padding: clamp(14px, 1.8vw, 24px) clamp(18px, 2.2vw, 30px);
+      font-size: clamp(0.85rem, 1.1vw, 1.25rem);
+      color: #e2e8f0;
+      line-height: 1.55;
+      display: none;
+      z-index: 50;
+      box-shadow: 0 10px 45px rgba(0, 0, 0, 0.9);
+    }
+    .speaker-drawer.open {
+      display: block;
+      animation: popNotes 0.2s ease;
+    }
+
+    @keyframes popNotes {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Floating Navigation Controls */
+    .nav-toolbar {
+      position: fixed;
+      bottom: 20px;
+      right: 28px;
+      z-index: 100;
+      display: flex;
+      gap: 10px;
+      opacity: 0.3;
+      transition: opacity 0.2s;
+    }
+    .nav-toolbar:hover {
+      opacity: 1;
+    }
+
+    .nav-btn {
+      background: rgba(18, 18, 24, 0.85);
+      border: 1px solid #334155;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      transition: all 0.2s;
+    }
+    .nav-btn:hover {
+      background: #2563eb;
+      border-color: #3b82f6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="viewport">
+    <div class="slide-canvas">
+
+      <!-- ==========================================================
+           SLIDE 1: PORTADA EJECUTIVA
+           ========================================================== -->
+      <section class="slide active" id="slide-1">
+        <svg class="artwork-fan" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <g filter="url(#glow)">
+            <rect x="250" y="40" width="160" height="420" rx="40" transform="rotate(45 250 40)" fill="url(#grad1)" opacity="0.95"/>
+            <rect x="200" y="80" width="160" height="420" rx="40" transform="rotate(45 200 80)" fill="url(#grad2)" opacity="0.8"/>
+            <rect x="150" y="120" width="160" height="420" rx="40" transform="rotate(45 150 120)" fill="url(#grad3)" opacity="0.6"/>
+          </g>
+          <defs>
+            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="35%" stop-color="#60a5fa"/>
+              <stop offset="70%" stop-color="#2563eb"/>
+              <stop offset="100%" stop-color="#1e1b4b"/>
+            </linearGradient>
+            <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#93c5fd"/>
+              <stop offset="50%" stop-color="#3b82f6"/>
+              <stop offset="100%" stop-color="#1e3a8a"/>
+            </linearGradient>
+            <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#bfdbfe"/>
+              <stop offset="60%" stop-color="#1d4ed8"/>
+              <stop offset="100%" stop-color="#0f172a"/>
+            </linearGradient>
+            <filter id="glow" x="-50" y="-50" width="600" height="600" filterUnits="userSpaceOnUse">
+              <feGaussianBlur stdDeviation="20" result="blur"/>
+              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+          </defs>
+        </svg>
+
+        <div class="slide-meta">
+          <div class="tagline">
+            <span class="pill">StreamView Analytics</span>
+            <span>Mesa Ejecutiva de Decisión</span>
+          </div>
+          <div class="counter">SLIDE 01 / 08</div>
+        </div>
+
+        <div class="slide-body" style="justify-content: flex-end; padding-bottom: 2vh;">
+          <h1 class="title-display">
+            DE LA NIEBLA<br>
+            A LA <span class="highlight">EVIDENCIA</span>
+          </h1>
+          <p style="font-size: clamp(1.1rem, 1.8vw, 2rem); color: var(--text-muted); font-weight: 400; margin-top: 14px; max-width: 62%;">
+            Visual Analytics para la toma de decisiones estratégicas de catálogo, audiencias e inversión
+          </p>
+        </div>
+
+        <div class="slide-footer">
+          <div class="footer-brand">Visualización de Datos (ADY1104) · Escuela de Informática · Duoc UC</div>
+          <div style="font-size: 0.9em; color: #64748b;">Presiona <kbd style="background:#1e293b; padding:2px 6px; border-radius:4px;">N</kbd> para guion · <kbd style="background:#1e293b; padding:2px 6px; border-radius:4px;">F</kbd> para pantalla completa</div>
+        </div>
+
+        <div class="speaker-drawer" id="drawer-1">
+          <strong>⏱ 00:00 - 00:30 | Introducción:</strong> "Buenos días, profesor y miembros de la comisión. Hoy presentamos nuestra solución integral de Visual Analytics para StreamView Analytics. Asumimos el rol del equipo consultor contratado para responder la pregunta que define el futuro de la compañía: ¿qué contenidos debemos comprar, renovar o promocionar para liderar en Latinoamérica? Bienvenidos a 'De la Niebla a la Evidencia'."
+        </div>
+      </section>
+
+      <!-- ==========================================================
+           SLIDE 2: CONTEXTO Y PROBLEMA (LA NIEBLA DE STEPHEN KING)
+           ========================================================== -->
+      <section class="slide" id="slide-2">
+        <div class="artwork-orb"></div>
+        <div class="slide-meta">
+          <div class="tagline">
+            <span class="pill">El Problema de Negocio</span>
+            <span>Storytelling Cinematográfico</span>
+          </div>
+          <div class="counter">SLIDE 02 / 08</div>
+        </div>
+
+        <div class="slide-body">
+          <div class="grid-2" style="align-items: center;">
+            <div>
+              <h2 class="title-display" style="font-size: clamp(3.2rem, 6.2vw, 6.8rem);">
+                ATRAPADOS EN<br>
+                <span class="highlight">LA NIEBLA</span>
+              </h2>
+              <p class="section-subheadline" style="margin-top: 16px;">
+                Un catálogo que creció 10 veces más rápido que la capacidad de entenderlo con reportes estáticos.
+              </p>
+            </div>
+            <div class="card" style="border-left: 4px solid #3b82f6; background: rgba(15, 23, 42, 0.75);">
+              <p style="font-size: clamp(1rem, 1.4vw, 1.6rem); font-style: italic; line-height: 1.6; color: #e2e8f0; margin-bottom: 16px;">
+                "En la película <strong>'La Niebla'</strong> de Stephen King, un grupo de personas queda atrapado en un supermercado a ciegas sin ver a tres metros, escuchando amenazas afuera en la oscuridad..."
+              </p>
+              <p style="font-size: clamp(0.85rem, 1.15vw, 1.3rem); color: var(--text-muted); line-height: 1.5;">
+                Así estaba StreamView: con más de 31.000 títulos pero en silos fragmentados de Excel, mientras gigantes como <strong>Netflix, HBO Max y Prime Video</strong> compiten afuera armados con analítica de precisión. Hoy encendemos los reflectores.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <div class="footer-brand">StreamView Analytics · Diagnóstico Organizacional</div>
+        </div>
+
+        <div class="speaker-drawer" id="drawer-2">
+          <strong>⏱ 00:30 - 01:30 | La Metáfora de La Niebla:</strong> "¿Han visto la película 'La Niebla' de Stephen King? Las personas atrapadas en un supermercado sin ver a tres metros mientras criaturas acechan afuera. Así estaba StreamView: atrapados en la niebla de Excels desalineados, mientras afuera gigantes como Netflix o HBO Max compiten con analítica de precisión. Nuestra misión fue disipar esa niebla con datos."
+        </div>
+      </section>
+
+      <!-- ==========================================================
+           SLIDE 3: RIGOR METODOLÓGICO Y DATOS
+           ========================================================== -->
+      <section class="slide" id="slide-3">
+        <div class="slide-meta">
+          <div class="tagline">
+            <span class="pill pill-purple">Gobernanza de Datos</span>
+            <span>Rigor Metodológico y Limpieza</span>
+          </div>
+          <div class="counter">SLIDE 03 / 08</div>
+        </div>
+
+        <div class="slide-body">
+          <h2 class="section-headline">Integración y Gobernanza: 31.991 Títulos Auditados</h2>
+          <p class="section-subheadline" style="margin-bottom: 20px;">Dos fuentes corporativas consolidadas sin imputación ficticia y con validaciones automatizadas.</p>
+
+          <div class="grid-2">
+            <div class="card" style="background: rgba(15, 23, 42, 0.65);">
+              <div style="display: flex; justify-content: space-around; align-items: center; margin-bottom: 18px;">
+                <div style="text-align: center;">
+                  <div class="stat-number" style="color: #38bdf8;">31.991</div>
+                  <div class="stat-label">Títulos Únicos</div>
+                </div>
+                <div style="text-align: center;">
+                  <div class="stat-number" style="color: #a855f7;">397</div>
+                  <div class="stat-label">IDs Colisionantes Resueltos</div>
+                </div>
+                <div style="text-align: center;">
+                  <div class="stat-number" style="color: #10b981;">0%</div>
+                  <div class="stat-label">Pérdida de Datos</div>
+                </div>
+              </div>
+              <div style="background: #090d16; border-radius: 10px; padding: 14px; font-size: clamp(0.8rem, 1.05vw, 1.2rem); color: #cbd5e1; line-height: 1.5;">
+                <strong style="color: #60a5fa;">Clave Compuesta <code>uid = tipo[0] + show_id</code>:</strong><br>
+                Descubrimos 397 IDs numéricos compartidos entre películas y series. La clave única impidió la sobreescritura de registros y garantizó la integridad del catálogo maestro.
+              </div>
+            </div>
+
+            <div class="card" style="gap: 12px;">
+              <div class="card-title" style="font-size: clamp(1rem, 1.35vw, 1.55rem); color: #60a5fa;">Decisiones Metodológicas Clave:</div>
+              <div class="card-text" style="font-size: clamp(0.8rem, 1.05vw, 1.2rem); line-height: 1.55;">
+                • <strong>Sin Producto Cartesiano (M × N):</strong> Desacoplamos Géneros y Países en tablas separadas (<code>generos.csv</code> y <code>paises.csv</code>) para no inflar los conteos.<br>
+                • <strong>Uso de Mediana vs Promedio:</strong> Protegemos a la empresa de gastar en títulos virales aislados o programas diarios (outliers extremos).<br>
+                • <strong>Finanzas Exclusivas en Cine:</strong> Variables de presupuesto y taquilla (USD nominales) analizadas solo en películas comerciales (≥ $100.000).<br>
+                • <strong>Límites Declarados:</strong> No medimos clics ni retención; medimos oferta, demanda comunitaria y valoración percibida.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <div class="footer-brand">StreamView Analytics · Calidad y Preparación de Datos</div>
+        </div>
+
+        <div class="speaker-drawer" id="drawer-3">
+          <strong>⏱ 01:30 - 02:30 | Rigor de Datos:</strong> "En el notebook preservamos exactamente los 31.991 títulos. Detectamos 397 IDs numéricos colisionantes y creamos la clave única UID. Jamás multiplicamos géneros con países en una sola tabla, lo que hubiese generado un producto cartesiano (M × N) inflando los datos. Y usamos la mediana para que los outliers virales no engañen el presupuesto."
+        </div>
+      </section>
+
+      <!-- ==========================================================
+           SLIDE 4: SOLUCIÓN Y PASE A DEMO EN VIVO
+           ========================================================== -->
+      <section class="slide" id="slide-4">
+        <svg class="artwork-fan" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="220" y="60" width="160" height="420" rx="40" transform="rotate(45 220 60)" fill="url(#grad1)" opacity="0.9"/>
+        </svg>
+
+        <div class="slide-meta">
+          <div class="tagline">
+            <span class="pill pill-emerald">Demostración en Vivo</span>
+            <span>Stack Python · Dash · Plotly</span>
+          </div>
+          <div class="counter">SLIDE 04 / 08</div>
+        </div>
+
+        <div class="slide-body">
+          <div class="grid-2" style="align-items: center;">
+            <div>
+              <h2 class="title-display" style="font-size: clamp(3.4rem, 6.6vw, 7.5rem);">
+                DASHBOARD<br>
+                <span class="highlight">POR AUDIENCIA</span>
+              </h2>
+              <p class="section-subheadline" style="margin-top: 14px;">
+                Estructurado en 5 módulos para responder a Directorio, Contenidos, Marketing y Finanzas sin saturación visual.
+              </p>
+              <div style="margin-top: 20px; font-size: clamp(0.85rem, 1.1vw, 1.3rem); color: #cbd5e1; line-height: 1.6;">
+                • <strong>Pestaña 1:</strong> Resumen Ejecutivo (Directorio)<br>
+                • <strong>Pestaña 2:</strong> Catálogo y Países (Contenidos)<br>
+                • <strong>Pestaña 3:</strong> Campañas y Matriz de Oportunidad (Marketing)<br>
+                • <strong>Pestaña 4:</strong> Finanzas y ROI Logarítmico (Películas)
+              </div>
+            </div>
+
+            <div>
+              <a href="http://127.0.0.1:8050" target="_blank" class="demo-action-box">
+                <div style="font-size: clamp(2.5rem, 4.5vw, 5rem);">🚀</div>
+                <div style="font-size: clamp(1.2rem, 1.8vw, 2.2rem); font-weight: 800; color: #fff;">
+                  ABRIR DASHBOARD EN VIVO
+                </div>
+                <div style="font-size: clamp(0.85rem, 1.1vw, 1.3rem); color: #93c5fd;">
+                  http://127.0.0.1:8050 · Clic para navegar
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <div class="footer-brand">StreamView Analytics · Demostración Interactiva (Min 02:30 a 07:00)</div>
+        </div>
+
+        <div class="speaker-drawer" id="drawer-4">
+          <strong>⏱ 02:30 - 07:00 | Demostración en Vivo:</strong> "Ahora, profesor, pasamos a compartir pantalla en el navegador. Demostramos: 1) Filtros reactivos con slider continuo (Criterio IE19), 2) Pestaña 1: Popularidad de series vs películas, 3) Pestaña 2: Barras horizontales de géneros y países, 4) Pestaña 3: Matriz de Oportunidad de marketing, y 5) Pestaña 4: Scatter logarítmico de finanzas con bloqueo para series y exportación PNG (Criterio IE23)."
+        </div>
+      </section>
+
+      <!-- ==========================================================
+           SLIDE 5: HALLAZGOS CLAVE DE CATÁLOGO
+           ========================================================== -->
+      <section class="slide" id="slide-5">
+        <div class="slide-meta">
+          <div class="tagline">
+            <span class="pill">Hallazgos Estratégicos</span>
+            <span>Composición y Engagement</span>
+          </div>
+          <div class="counter">SLIDE 05 / 08</div>
+        </div>
+
+        <div class="slide-body">
+          <h2 class="section-headline">Hallazgos del Catálogo: Donde los Datos Desafían la Intuición</h2>
+          <p class="section-subheadline" style="margin-bottom: 24px;">Patrones determinantes descubiertos a través del análisis visual interactivo.</p>
+
+          <div class="grid-3">
+            <div class="card" style="background: rgba(37, 99, 235, 0.12); border-color: #3b82f6;">
+              <div class="stat-number" style="color: #60a5fa;">14.2 vs 6.8</div>
+              <div class="card-title" style="margin-top: 10px;">Las Series Duplican la Popularidad</div>
+              <div class="card-text">
+                Aunque las películas representan más del 65% de los títulos, las series tienen más del doble de popularidad mediana. Son el motor del hábito de suscripción mensual.
+              </div>
+            </div>
+
+            <div class="card" style="background: rgba(168, 85, 247, 0.12); border-color: #a855f7;">
+              <div class="stat-number" style="color: #c084fc;">Top Nichos</div>
+              <div class="card-title" style="margin-top: 10px;">La Oportunidad Asiática</div>
+              <div class="card-text">
+                EE.UU. y Reino Unido saturan el catálogo en cantidad, pero los contenidos de <strong>Japón y Corea del Sur</strong> (Anime y K-Dramas) registran la mayor demanda comunitaria unitaria.
+              </div>
+            </div>
+
+            <div class="card" style="background: rgba(16, 185, 129, 0.12); border-color: #10b981;">
+              <div class="stat-number" style="color: #34d399;">Matriz Oportunidad</div>
+              <div class="card-title" style="margin-top: 10px;">La Paradoja de Drama</div>
+              <div class="card-text">
+                Drama y Comedia tienen más de 10.000 títulos en catálogo pero compiten ferozmente. Nichos como <strong>Documental y Animación</strong> tienen <em>alta demanda y poca oferta</em>.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <div class="footer-brand">StreamView Analytics · Análisis de Catálogo y Audiencia</div>
+        </div>
+
+        <div class="speaker-drawer" id="drawer-5">
+          <strong>⏱ 07:00 - 07:45 | Hallazgos de Catálogo:</strong> "Al volver de la demo consolidamos tres hallazgos que rompen paradigmas. Primero: las series superan con creces al cine en popularidad mediana (14.2 frente a 6.8). Segundo: las producciones coreanas y japonesas tienen un arrastre apasionado. Y tercero: Drama y Comedia están saturados, mientras que la animación y los documentales representan un océano azul de oportunidad."
+        </div>
+      </section>
+
+      <!-- ==========================================================
+           SLIDE 6: REALIDAD FINANCIERA CINEMATOGRÁFICA
+           ========================================================== -->
+      <section class="slide" id="slide-6">
+        <div class="slide-meta">
+          <div class="tagline">
+            <span class="pill pill-rose">Pestaña 4 · Finanzas</span>
+            <span>Riesgo y Retorno de Inversión</span>
+          </div>
+          <div class="counter">SLIDE 06 / 08</div>
+        </div>
+
+        <div class="slide-body">
+          <h2 class="section-headline">La Realidad Financiera Cinematográfica</h2>
+          <p class="section-subheadline" style="margin-bottom: 24px;">Análisis riguroso sobre películas con presupuesto y taquilla comercial declarados.</p>
+
+          <div class="grid-3">
+            <div class="card" style="border-left: 4px solid #f43f5e;">
+              <div class="stat-number" style="color: #f43f5e;">58%</div>
+              <div class="card-title" style="margin-top: 10px;">Tasa de Recuperación Directa</div>
+              <div class="card-text">
+                Solo el 58% de las películas comerciales analizadas recupera su costo de producción (ROI ≥ 1.0x). <strong>El 42% opera en pérdida en taquilla directa.</strong>
+              </div>
+            </div>
+
+            <div class="card" style="border-left: 4px solid #10b981;">
+              <div class="stat-number" style="color: #10b981;">&gt; 2.5x</div>
+              <div class="card-title" style="margin-top: 10px;">Animación y Aventura Familiar</div>
+              <div class="card-text">
+                Lideran los múltiplos de retorno mediano sobre costo. Son producciones de bajo riesgo relativo con alto arrastre transgeneracional.
+              </div>
+            </div>
+
+            <div class="card" style="border-left: 4px solid #f59e0b;">
+              <div class="stat-number" style="color: #f59e0b;">&gt; $30M</div>
+              <div class="card-title" style="margin-top: 10px;">Zona Roja: Dramas Caros</div>
+              <div class="card-text">
+                Producir dramas con presupuestos superiores a 30 millones de dólares presenta una tasa de fracaso de taquilla superior al 55%.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <div class="footer-brand">StreamView Analytics · Finanzas y Riesgo de Inversión</div>
+        </div>
+
+        <div class="speaker-drawer" id="drawer-6">
+          <strong>⏱ 07:45 - 08:30 | Finanzas:</strong> "En el análisis financiero encontramos una realidad contundente: el 42% de las películas comerciales no recupera su presupuesto de producción en taquilla. Pero en el scatter plot logarítmico descubrimos que la animación y la aventura familiar logran medianas de retorno superiores a 2.5 veces su costo. Producir dramas prestigiosos pero caros es una trampa de riesgo."
+        </div>
+      </section>
+
+      <!-- ==========================================================
+           SLIDE 7: RECOMENDACIONES ESTRATÉGICAS H-E-I-R
+           ========================================================== -->
+      <section class="slide" id="slide-7">
+        <div class="slide-meta">
+          <div class="tagline">
+            <span class="pill pill-purple">Framework H-E-I-R</span>
+            <span>Plan de Acción Estratégico</span>
+          </div>
+          <div class="counter">SLIDE 07 / 08</div>
+        </div>
+
+        <div class="slide-body">
+          <h2 class="section-headline">Recomendaciones Estratégicas para la Organización</h2>
+          <div style="margin-top: 10px;">
+            <div class="recom-row">
+              <div class="recom-num">01</div>
+              <div style="flex:1;"><strong>Directorio · Asignar el 60% del presupuesto de licencias a Series:</strong> Dado su arrastre de popularidad (14.2 vs 6.8), las series son la palanca principal de retención y menor churn.</div>
+            </div>
+            <div class="recom-row">
+              <div class="recom-num">02</div>
+              <div style="flex:1;"><strong>Contenidos · Coproducciones en Animación y Aventura Familiar:</strong> Es el cuadrante de menor riesgo financiero y mayor retorno mediano probado (&gt; 2.5x).</div>
+            </div>
+            <div class="recom-row">
+              <div class="recom-num">03</div>
+              <div style="flex:1;"><strong>Contenidos · Topar el presupuesto de películas dramáticas en $10M:</strong> Evitar superproducciones dramáticas que presentan más de 55% de fracaso en taquilla.</div>
+            </div>
+            <div class="recom-row">
+              <div class="recom-num">04</div>
+              <div style="flex:1;"><strong>Marketing · Estrategia Publicitaria 50/30/20:</strong> 50% en campañas masivas (Top 10), 30% en catálogo consolidado (Drama/Comedia) y 20% en nichos de alta conversión (Documental, Anime).</div>
+            </div>
+            <div class="recom-row">
+              <div class="recom-num">05</div>
+              <div style="flex:1;"><strong>Marketing · Líneas de campaña dirigidas a comunidades asiáticas:</strong> Captar suscriptores de Anime y K-Drama con el menor costo de adquisición por usuario (CAC).</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <div class="footer-brand">StreamView Analytics · Recomendaciones Ejecutivas</div>
+        </div>
+
+        <div class="speaker-drawer" id="drawer-7">
+          <strong>⏱ 08:30 - 09:30 | Recomendaciones H-E-I-R:</strong> "Dejamos 5 acciones concretas fundamentadas en evidencia: 1) 60% de presupuesto a series para el Directorio; 2) Coproducir animación y aventura para Contenidos; 3) Topar dramas en 10 millones de dólares; 4) Estrategia 50/30/20 para Marketing; y 5) Campañas segmentadas al boom asiático."
+        </div>
+      </section>
+
+      <!-- ==========================================================
+           SLIDE 8: JUSTIFICACIÓN TECNOLÓGICA Y CIERRE
+           ========================================================== -->
+      <section class="slide" id="slide-8">
+        <div class="artwork-orb" style="right: 5%; bottom: 5%;"></div>
+        <div class="slide-meta">
+          <div class="tagline">
+            <span class="pill">Cierre Ejecutivo · Criterio IE15</span>
+            <span>Arquitectura y Ronda de Preguntas</span>
+          </div>
+          <div class="counter">SLIDE 08 / 08</div>
+        </div>
+
+        <div class="slide-body">
+          <div class="grid-2" style="align-items: center; margin-bottom: 14px;">
+            <div class="card">
+              <div class="card-title">🏆 Justificación Técnica vs Power BI / Tableau</div>
+              <div class="card-text" style="font-size: clamp(0.78rem, 1.05vw, 1.15rem); line-height: 1.6;">
+                • <strong>Dark Theme Nativo y UX:</strong> Control milimétrico de CSS para recrear la identidad de Netflix y HBO Max sin las limitaciones de plantillas rígidas de BI.<br>
+                • <strong>Rendimiento en Memoria con Pandas:</strong> Cálculo instantáneo de percentiles, matrices de oportunidad y cruces por claves compuestas sin latencia.<br>
+                • <strong>Costo Cero y Soberanía:</strong> Código 100% abierto sin licencias por usuario, desplegable en producción con Gunicorn.
+              </div>
+            </div>
+
+            <div class="card" style="text-align: center; background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(168, 85, 247, 0.15)); border-color: #3b82f6;">
+              <h3 class="title-display" style="font-size: clamp(2.8rem, 5.2vw, 5.8rem); margin-bottom: 8px;">
+                LA NIEBLA SE HA <span class="highlight">DISIPADO</span>
+              </h3>
+              <p style="font-size: clamp(0.95rem, 1.25vw, 1.45rem); color: #cbd5e1; line-height: 1.4;">
+                StreamView Analytics cuenta hoy con la certeza analítica para competir y liderar con evidencia.
+              </p>
+              <div style="margin-top: 16px; font-weight: 700; color: #38bdf8; font-size: clamp(1rem, 1.35vw, 1.6rem);">
+                ¡Muchas gracias! Quedamos atentos a sus preguntas.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <div class="footer-brand">StreamView Analytics · Defensa y Ronda de Preguntas Técnicas</div>
+        </div>
+
+        <div class="speaker-drawer" id="drawer-8">
+          <strong>⏱ 09:30 - 10:00 | Cierre Técnico:</strong> "Para concluir y defendiendo el criterio IE15: seleccionamos Python, Dash y Plotly porque nos otorgó control estético total para un Dark Theme estilo Netflix, procesamiento en memoria con Pandas y cero costos de licenciamiento por usuario. Hoy StreamView ya no está en el supermercado de La Niebla: tenemos el mapa y los reflectores para navegar con éxito. Muchas gracias."
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Hidden Nav Bar for quick interaction -->
+  <div class="nav-toolbar">
+    <button class="nav-btn" onclick="prevSlide()">← Anterior</button>
+    <button class="nav-btn" onclick="nextSlide()">Siguiente →</button>
+    <button class="nav-btn" style="background:#2563eb;" onclick="toggleNotes(currentSlide)">🎤 Guion (N)</button>
+    <button class="nav-btn" onclick="toggleFullScreen()">⛶ Fullscreen (F)</button>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 8;
+
+    function updateSlide() {
+      for (let i = 1; i <= totalSlides; i++) {
+        const slide = document.getElementById(`slide-${i}`);
+        if (slide) {
+          slide.classList.remove('active');
+          if (i === currentSlide) {
+            slide.classList.add('active');
+          }
+        }
+      }
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+      } else {
+        currentSlide = 1;
+      }
+      updateSlide();
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    function toggleNotes(slideNum) {
+      const drawer = document.getElementById(`drawer-${slideNum}`);
+      if (drawer) {
+        drawer.classList.toggle('open');
+      }
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'n' || e.key === 'N') {
+        toggleNotes(currentSlide);
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullScreen();
+      } else if (e.key === 'Home') {
+        currentSlide = 1;
+        updateSlide();
+      } else if (e.key === 'End') {
+        currentSlide = totalSlides;
+        updateSlide();
+      }
+    });
+
+    updateSlide();
+  </script>
+</body>
+</html>
